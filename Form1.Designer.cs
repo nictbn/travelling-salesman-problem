@@ -145,7 +145,7 @@
             // 
             // LoadBenchmarkOpenFileDialog
             // 
-            this.LoadBenchmarkOpenFileDialog.Filter = "Benchmark files | *.bench ";
+            this.LoadBenchmarkOpenFileDialog.Filter = "Benchmark files (*.bench)|*.bench";
             this.LoadBenchmarkOpenFileDialog.Title = "Open Benchmark File";
             // 
             // Form1
