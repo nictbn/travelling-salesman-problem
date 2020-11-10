@@ -53,7 +53,7 @@ namespace TravellingSalesmanProblem
         {
             List<Individual> population = CreateInitialPopulation();
             EvaluateAllIndividuals(population);
-            for(int i = 0; i < numberOfGenerations; i++)
+            for (int i = 0; i < numberOfGenerations; i++)
             {
                 List<Individual> offspring = new List<Individual>();
                 while (offspring.Count != populationSize)
@@ -84,6 +84,11 @@ namespace TravellingSalesmanProblem
                         {
                             firstOffspring = OrderOne(population[firstContestant], population[secondContestant]);
                             secondOffspring = OrderOne(population[secondContestant], population[firstContestant]);
+                        }
+                        else if (crossoverOperator == PMX_CROSSOVER)
+                        {
+                            firstOffspring = PMX(population[firstContestant], population[secondContestant]);
+                            secondOffspring = PMX(population[secondContestant], population[firstContestant]);
                         }
                     }
                     else
@@ -129,6 +134,8 @@ namespace TravellingSalesmanProblem
             return population;
         }
 
+
+
         private void CheckForDuplicates(Individual offspring)
         {
             List<int> alreadyTraversedCities = new List<int>();
@@ -158,7 +165,7 @@ namespace TravellingSalesmanProblem
                 secondPick = t;
             }
             List<int> inverseValues = new List<int>();
-            for(int i = secondPick; i >= firstPick; i--)
+            for (int i = secondPick; i >= firstPick; i--)
             {
                 inverseValues.Add(offspring.chromosome[i]);
             }
@@ -189,7 +196,7 @@ namespace TravellingSalesmanProblem
         {
             int firstPick = rng.Next(offspring.numberOfCities);
             int secondPick = rng.Next(offspring.numberOfCities);
-            while(firstPick == secondPick)
+            while (firstPick == secondPick)
             {
                 secondPick = rng.Next(offspring.numberOfCities);
             }
@@ -207,7 +214,72 @@ namespace TravellingSalesmanProblem
             }
             offspring.chromosome[firstPick + 1] = movedValue;
         }
+        private Individual PMX(Individual individual1, Individual individual2)
+        {
+            Individual offspring = new Individual(individual1.numberOfCities);
+            int firstCut = rng.Next(2, individual1.numberOfCities - 2);
+            int secondCut = rng.Next(2, individual1.numberOfCities - 2);
+            int t;
+            if (firstCut > secondCut)
+            {
+                t = firstCut;
+                firstCut = secondCut;
+                secondCut = t;
+            }
 
+            List<int> alreadySelectedCities = new List<int>();
+            List<int> occupiedPositions = new List<int>();
+            for (int i = firstCut; i <= secondCut; i++)
+            {
+                offspring.chromosome[i] = individual1.chromosome[i];
+                alreadySelectedCities.Add(individual1.chromosome[i]);
+                occupiedPositions.Add(i);
+            }
+
+            for (int i = firstCut; i <= secondCut; i++)
+            {
+                if (alreadySelectedCities.Contains(individual2.chromosome[i]))
+                {
+                    continue;
+                }
+                int toBeCopied = individual2.chromosome[i];
+
+                int position = i;
+
+                while (position >= firstCut && position <= secondCut)
+                {
+                    int valueInParentOne = individual1.chromosome[position];
+                    position = PositionOfValueInChromosome(valueInParentOne, individual2.chromosome);
+                }
+                offspring.chromosome[position] = toBeCopied;
+                occupiedPositions.Add(position);
+                alreadySelectedCities.Add(toBeCopied);
+            }
+
+            for( int i = 0; i < offspring.numberOfCities; i++)
+            {
+                if (occupiedPositions.Contains(i))
+                {
+                    continue;
+                }
+                offspring.chromosome[i] = individual2.chromosome[i];
+            }
+            return offspring;
+        }
+
+        int PositionOfValueInChromosome(int value, int[] chromosome)
+        {
+            int position = -1;
+            for (int i = 0; i < chromosome.Length; i++)
+            {
+                if (chromosome[i] == value)
+                {
+                    position = i;
+                    break;
+                }
+            }
+            return position;
+        }
         private Individual OrderOne(Individual individual1, Individual individual2)
         {
             Individual offspring = new Individual(individual1.numberOfCities);
@@ -221,7 +293,7 @@ namespace TravellingSalesmanProblem
                 secondCut = t;
             }
             List<int> alreadyPresentCities = new List<int>();
-            for(int i = firstCut; i <= secondCut; i++)
+            for (int i = firstCut; i <= secondCut; i++)
             {
                 offspring.chromosome[i] = individual1.chromosome[i];
                 alreadyPresentCities.Add(individual1.chromosome[i]);
