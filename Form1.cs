@@ -11,7 +11,15 @@ namespace TravellingSalesmanProblem
 {
     public partial class Form1 : Form
     {
+        string benchmarkName;
+        int numberOfGenerationsForDisplay;
+        int populationSizeForDisplay;
+        int recombinationProbabilityForDisplay;
+        int mutationProbabilityForDisplay;
+        string crossoverOperatorForDisplay;
+        string mutationOperatorForDisplay;
         double[,] distancesMatrix;
+        GeneticAlgorithm geneticAlgorithm;
         public Form1()
         {
             InitializeComponent();
@@ -33,7 +41,7 @@ namespace TravellingSalesmanProblem
                     {
                         using (myStream)
                         {
-                            System.IO.StreamReader file = new System.IO.StreamReader(myStream);
+                            StreamReader file = new StreamReader(myStream);
                             string line;
                             while ((line = file.ReadLine()) != null)
                             {
@@ -48,12 +56,10 @@ namespace TravellingSalesmanProblem
                                     numberOfCities = distances.Length;
                                     distancesMatrix = new double[numberOfCities, numberOfCities];
                                 }
-
                                 if (distances.Length != numberOfCities)
                                 {
                                     throw new Exception("Line " + currentMatrixLine + " does not have enough distances!");
                                 }
-
                                 for (int i = 0; i < numberOfCities; i++)
                                 {
                                     double distance;
@@ -71,6 +77,7 @@ namespace TravellingSalesmanProblem
                                 throw new Exception("The distances matrix is incomplete!");
                             }
                             ExecuteAlgorithmButton.Enabled = true;
+                            benchmarkName = LoadBenchmarkOpenFileDialog.SafeFileName;
                         }
                     }
                 }
@@ -83,7 +90,122 @@ namespace TravellingSalesmanProblem
         }
         private void ExecuteAlgorithmButton_Click(object sender, EventArgs e)
         {
+            int numberOfGenerations;
+            bool result = int.TryParse(NumberOfGenerationsTextBox.Text, out numberOfGenerations);
+            if (!result)
+            {
+                MessageBox.Show("Could not parse the number of generations!");
+                return;
+            }
+            if (numberOfGenerations < 1)
+            {
+                MessageBox.Show("The number of generations is incorrect. Try again!");
+                return;
+            }
+            numberOfGenerationsForDisplay = numberOfGenerations;
 
+            int populationSize;
+            result = int.TryParse(PopulationSizeTextBox.Text, out populationSize);
+            if (!result)
+            {
+                MessageBox.Show("Could not parse the population size!");
+                return;
+            }
+            if (populationSize < 2)
+            {
+                MessageBox.Show("The population size is incorrect, it should have at least two individuals!");
+                return;
+            }
+            populationSizeForDisplay = populationSize;
+
+            int recombinationProbability;
+            result = int.TryParse(RecombinationProbabilityTextBox.Text, out recombinationProbability);
+            if (!result)
+            {
+                MessageBox.Show("Could not parse the recombination probability!");
+                return;
+            }
+            if (recombinationProbability < 0 || recombinationProbability > 100)
+            {
+                MessageBox.Show("The recombination probability is incorrect!");
+                return;
+            }
+            recombinationProbabilityForDisplay = recombinationProbability;
+
+
+            int mutationProbability;
+            result = int.TryParse(MutationProbabilityTextBox.Text, out mutationProbability);
+            if (!result)
+            {
+                MessageBox.Show("Could not parse the mutation probability!");
+                return;
+            }
+            if (mutationProbability < 0 || mutationProbability > 100)
+            {
+                MessageBox.Show("The mutation probability is incorrect!");
+                return;
+            }
+            mutationProbabilityForDisplay = mutationProbability;
+
+            int crossoverOperator = CrossoverDropDown.SelectedIndex;
+            crossoverOperatorForDisplay = CrossoverDropDown.Items[crossoverOperator].ToString();
+            int mutationOperator = MutationDropDown.SelectedIndex;
+            mutationOperatorForDisplay = MutationDropDown.Items[mutationOperator].ToString();
+            geneticAlgorithm = new GeneticAlgorithm(
+                crossoverOperator,
+                mutationOperator,
+                numberOfGenerations,
+                populationSize,
+                recombinationProbability,
+                mutationProbability,
+                distancesMatrix);
+            AlgorithmBackgroundWorker.RunWorkerAsync();
+        }
+
+        private void AlgorithmBackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            geneticAlgorithm.e = e;
+            geneticAlgorithm.bw = AlgorithmBackgroundWorker;
+            geneticAlgorithm.RunAlgorithm();
+        }
+
+        private void AlgorithmBackgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            List<Individual> results = (List<Individual>)e.Result;
+            GenerateFile(results);
+            int a = 5;
+        }
+
+        private void GenerateFile(List<Individual> results)
+        {
+            using (StreamWriter writer = new StreamWriter("result" +
+                "_R_" + recombinationProbabilityForDisplay +
+                "_M_" + mutationProbabilityForDisplay +
+                "_P_" + populationSizeForDisplay +
+                "_MAX_GEN_" + numberOfGenerationsForDisplay + "_" + crossoverOperatorForDisplay + "_" + mutationOperatorForDisplay + ".txt"))
+            {
+                writer.WriteLine("Recombination Probability: " + recombinationProbabilityForDisplay);
+                writer.WriteLine("Mutation Probability: " + mutationProbabilityForDisplay);
+                writer.WriteLine("Population Size: " + populationSizeForDisplay);
+                writer.WriteLine("Maximum Number Of Generations: " + numberOfGenerationsForDisplay);
+                writer.WriteLine("Crossover Operator: " + crossoverOperatorForDisplay);
+                writer.WriteLine("Mutation Operator: " + mutationOperatorForDisplay);
+                for (int i = 0; i < results.Count; i++)
+                {
+                    writer.Write(i + ". Fitness: " + results[i].fitness);
+                    writer.Write(i + " Chromosome: ");
+                    for (int j = 0; j < results[i].numberOfCities; j++)
+                    {
+                        writer.Write(results[i].chromosome[j] + " ");
+                    }
+                    writer.WriteLine();
+                }
+            }
+        }
+
+        private void AlgorithmBackgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            progressBar1.Value = e.ProgressPercentage;
         }
     }
 }
